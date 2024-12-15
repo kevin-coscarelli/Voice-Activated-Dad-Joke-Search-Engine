@@ -13,9 +13,15 @@ services:
       context: .
     environment:
       NODE_ENV: development
-      DOCKER_BUILDKIT: 1
     ports:
       - 3000:3000
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /usr/src/app
+          ignore: 
+            - node_modules
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
 # start the database before your application. The `db-data` volume persists the
