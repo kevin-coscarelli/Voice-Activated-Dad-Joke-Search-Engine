@@ -1,17 +1,24 @@
 import axios from 'axios';
 
-const getRecordingData = {
-  url: 'https://webhook.site/token/5010786f-397d-472b-aa41-af51e6fe51f9/request/latest/raw',
+axios.interceptors.request.use((config) => {
+  if (config.fetchOptions?.onlyText) {
+    config.headers['Accept'] = 'text/plain';  // Explicitly set Accept header
+  }
+  return config;
+});
+
+const getTranscriptionData = {
+  url: '/callback/token/5010786f-397d-472b-aa41-af51e6fe51f9/request/latest/raw',
   apikey: '5010786f-397d-472b-aa41-af51e6fe51f9'
 }
 
-export const getRecording = () => {
+export const getTranscription = () => {
   const headers = {
       'Accept': 'application/json',
-      'api-key': getRecordingData.apikey,
+      'api-key': getTranscriptionData.apikey,
   }
   return axios.get(
-    getRecordingData.url, {
+    getTranscriptionData.url, {
       headers: { ...headers },
       withCredentials: true
     }
@@ -19,7 +26,7 @@ export const getRecording = () => {
 }
 
 const postRecordingData = {
-  url: 'https://api.goodtape.io/transcribe',
+  url: '/api/transcribe',
   apikey: 'goodluckhopeyouhavefun',
   callbackUrl: 'https://webhook.site/5010786f-397d-472b-aa41-af51e6fe51f9'
 }
@@ -35,11 +42,29 @@ export const postRecording = (audio: File) => {
   formData.append('callbackUrl', postRecordingData.callbackUrl);
 
   return axios.post(
-    '/api/transcribe',
+    postRecordingData.url,
     formData,
     {
       headers: {
         ...headers,
+      }
+    }
+  );
+}
+
+export const getJokes = (searchTerms: string) => {
+  const headers = {
+    'Accept': 'text/plain',
+  };
+  return axios.get(
+    '/dadjokes/search',
+    {
+      ...headers,
+      params: {
+        'term': searchTerms
+      },
+      fetchOptions: {
+        onlyText: true
       }
     }
   );
