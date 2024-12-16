@@ -53,6 +53,8 @@ export const postRecording = (audio: File) => {
 }
 
 export const getJokes = (searchTerms?: string) => {
+  // If no search terms were identified, get a random one.
+
   const headers = {
     'Accept': 'text/plain',
   };

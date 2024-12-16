@@ -3,6 +3,8 @@ import { getJokes, getTranscription, postRecording } from './services';
 import {MediaRecorder, register, IMediaRecorder} from 'extendable-media-recorder';
 import {connect} from 'extendable-media-recorder-wav-encoder';
 import './AudioRecorder.css';
+import { RecordScreen } from './RecordScreen';
+import { JokeScreen } from './JokeScreen';
 
 enum ScreenStateEnum {
   Record,
@@ -11,8 +13,15 @@ enum ScreenStateEnum {
 
 await register(await connect());
 
+// Going for .wav MIMEtype because .webm or .weba are not supported by the API
 const mimeType = 'audio/wav';
 
+/**
+ * Because the request prompt is "What do you want the joke to be about?"
+ * I expect and cross my fingers so that users include the word "about"
+ * in the joke request. I search the keyword in the transcription and get
+ * the substring after it, format it and use it as a query parameter value
+ */
 const getJokeSearchTerms = (str?: string) => {
   try {
     if (!str || str === '') {
@@ -37,7 +46,6 @@ export function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<IMediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const [audioURL, setAudioURL] = useState<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [dadJokes, setDadJokes] = useState<string[]>([]);
   const [screenState, setScreenState] = useState<ScreenStateEnum>(ScreenStateEnum.Record)
@@ -83,7 +91,6 @@ export function AudioRecorder() {
   const transcribeAndQueryJoke = async(audioBlob: Blob) => {
     try {
       const audioFile = new File([audioBlob], 'recording.wav', { type: mimeType });
-      setAudioURL(URL.createObjectURL(audioBlob));
 
       await postRecording(audioFile);
       
@@ -95,6 +102,7 @@ export function AudioRecorder() {
   }
 
   const fetchTranscription = () => {
+    // Small timeout to let webhook endpoint catch up
     setTimeout(async () => {
       try {
         const transcriptionRes = await getTranscription();
@@ -128,80 +136,6 @@ export function AudioRecorder() {
           termsFound={termsFound}
         />)
       }
-        {/* {audioURL && (
-          <div>
-            <h3>Playback</h3>
-            <audio src={audioURL} controls />
-          </div>
-        )} */}
     </div>
   );
 }
-
-function RecordScreen(
-  {
-    isRecording,
-    startRecording,
-    stopRecording
-  }: {
-    isRecording: boolean,
-    startRecording: () => void,
-    stopRecording: () => void
-  }
-) {
-  return (
-    <>
-      <p>What do you want the joke to be <b>about</b>?</p>
-      <div className='container__button'>
-        <button
-          onClick={isRecording ? stopRecording : startRecording}
-        >
-          {isRecording ? 'Stop joke request' : 'Request joke'}
-        </button>
-      </div>
-    </>
-  )
-}
-
-function speak(text: string) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  speechSynthesis.speak(utterance);
-}
-
-const speakable = ('speechSynthesis' in window);
-
-function JokeScreen(
-  {
-    dadJokes,
-    goBack,
-    termsFound
-  }: { 
-    dadJokes: string[],
-    goBack: () => void,
-    termsFound: boolean
-  }
-) {
-  const [jokeIndex, setJokeIndex] = useState<number>(0);
-  return (
-    <>
-      <div className='container__prev-next'>
-        {jokeIndex > 0 &&
-          (<button onClick={() => setJokeIndex(jokeIndex - 1)}>Previous</button>)
-        }
-        {jokeIndex < dadJokes.length - 1 && dadJokes.length > 1 &&
-          (<button onClick={() => setJokeIndex(jokeIndex + 1)}>Next</button>)
-        }
-      </div>
-      {!termsFound && (<h2>Not sure what the joke should be about, but here is a random one</h2>)}
-      {
-        speakable ?
-        (<button title='Push here to hear the joke on a weird voice.' onClick={() => speak(dadJokes[jokeIndex])} className='container__joke'>{dadJokes[jokeIndex]}</button>) :
-        (<h3 className='container__joke'>{dadJokes[jokeIndex]}</h3>)
-      }
-      <div className='container__back-button'>
-        <button onClick={goBack}>Go Back</button>
-      </div>
-    </>
-  )
-}
-
