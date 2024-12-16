@@ -2,6 +2,7 @@ import { useState } from "react";
 
 function speak(text: string) {
   const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en';
   speechSynthesis.speak(utterance);
 }
 
