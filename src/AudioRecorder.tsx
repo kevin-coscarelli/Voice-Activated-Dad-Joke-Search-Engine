@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { getJokes, getTranscription, postRecording } from './services';
 import {MediaRecorder, register, IMediaRecorder} from 'extendable-media-recorder';
 import {connect} from 'extendable-media-recorder-wav-encoder';
+import './AudioRecorder.css';
 
 enum ScreenStateEnum {
   Record,
@@ -40,6 +41,7 @@ export function AudioRecorder() {
   const audioChunksRef = useRef<Blob[]>([]);
   const [dadJokes, setDadJokes] = useState<string[]>([]);
   const [screenState, setScreenState] = useState<ScreenStateEnum>(ScreenStateEnum.Record)
+  const [termsFound, setTermsFound] = useState(true)
 
   const startRecording = async () => {
     try {
@@ -98,11 +100,10 @@ export function AudioRecorder() {
         const transcriptionRes = await getTranscription();
         const resultText: string = transcriptionRes.data.content.text
         const formattedSearchParams = getJokeSearchTerms(resultText);
-        if (formattedSearchParams) {
-          const jokesRaw = (await getJokes(formattedSearchParams)).data;
-          setDadJokes(jokesRaw.split('\n'));
-          setScreenState(ScreenStateEnum.JokesReady);
-        }
+        setTermsFound(formattedSearchParams ? true : false);
+        const jokesRaw = (await getJokes(formattedSearchParams)).data;
+        setDadJokes(jokesRaw.split('\n'));
+        setScreenState(ScreenStateEnum.JokesReady);
       }
       catch (error) {
         console.error('Error fetching transcription from webhook endpoint', error);
@@ -112,7 +113,7 @@ export function AudioRecorder() {
   }
 
   return (
-    <div>
+    <div className='container'>
       <h1>Get your dad joke today!</h1>
       {
         screenState === ScreenStateEnum.Record ?
@@ -124,6 +125,7 @@ export function AudioRecorder() {
         (<JokeScreen
           dadJokes={dadJokes}
           goBack={() => setScreenState(ScreenStateEnum.Record)}
+          termsFound={termsFound}
         />)
       }
         {/* {audioURL && (
@@ -148,24 +150,41 @@ function RecordScreen(
   }
 ) {
   return (
-    <div>
-      <h2>What do you want the joke to be <b>about</b></h2>
-      <button
-        onClick={isRecording ? stopRecording : startRecording}
-      >
-        {isRecording ? 'Stop joke request' : 'Request joke'}
-      </button>
-    </div>
+    <>
+      <p>What do you want the joke to be <b>about</b>?</p>
+      <div className='container__button'>
+        <button
+          onClick={isRecording ? stopRecording : startRecording}
+        >
+          {isRecording ? 'Stop joke request' : 'Request joke'}
+        </button>
+      </div>
+    </>
   )
 }
 
+function speak(text: string) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utterance);
+}
+
+const speakable = ('speechSynthesis' in window);
+
 function JokeScreen(
-  { dadJokes, goBack }: { dadJokes: string[], goBack: () => void }
+  {
+    dadJokes,
+    goBack,
+    termsFound
+  }: { 
+    dadJokes: string[],
+    goBack: () => void,
+    termsFound: boolean
+  }
 ) {
   const [jokeIndex, setJokeIndex] = useState<number>(0);
   return (
-    <div>
-      <div>
+    <>
+      <div className='container__prev-next'>
         {jokeIndex > 0 &&
           (<button onClick={() => setJokeIndex(jokeIndex - 1)}>Previous</button>)
         }
@@ -173,9 +192,16 @@ function JokeScreen(
           (<button onClick={() => setJokeIndex(jokeIndex + 1)}>Next</button>)
         }
       </div>
-      <h3>{dadJokes[jokeIndex]}</h3>
-      <button onClick={goBack}>Go Back</button>
-    </div>
+      {!termsFound && (<h2>Not sure what the joke should be about, but here is a random one</h2>)}
+      {
+        speakable ?
+        (<button title='Push here to hear the joke on a weird voice.' onClick={() => speak(dadJokes[jokeIndex])} className='container__joke'>{dadJokes[jokeIndex]}</button>) :
+        (<h3 className='container__joke'>{dadJokes[jokeIndex]}</h3>)
+      }
+      <div className='container__back-button'>
+        <button onClick={goBack}>Go Back</button>
+      </div>
+    </>
   )
 }
 

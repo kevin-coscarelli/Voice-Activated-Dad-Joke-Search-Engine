@@ -52,20 +52,32 @@ export const postRecording = (audio: File) => {
   );
 }
 
-export const getJokes = (searchTerms: string) => {
+export const getJokes = (searchTerms?: string) => {
   const headers = {
     'Accept': 'text/plain',
   };
+  if (searchTerms) {
+    return axios.get(
+      '/dadjokes/search',
+      {
+        ...headers,
+        params: {
+          'term': searchTerms
+        },
+        fetchOptions: {
+          onlyText: true
+        }
+      }
+    );
+  }
+
   return axios.get(
-    '/dadjokes/search',
+    '/dadjokes',
     {
       ...headers,
-      params: {
-        'term': searchTerms
-      },
       fetchOptions: {
         onlyText: true
       }
     }
-  );
+  )
 }
